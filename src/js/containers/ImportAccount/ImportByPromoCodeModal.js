@@ -1,23 +1,18 @@
 import React from "react"
 import { connect } from "react-redux"
 import Recaptcha from "react-recaptcha"
-import { importNewAccount, promoCodeChange, openPromoCodeModal, closePromoCodeModal } from "../../actions/accountActions"
+import { importNewAccount, openPromoCodeModal, closePromoCodeModal } from "../../actions/accountActions"
 import { addressFromPrivateKey } from "../../utils/keys"
 import { getTranslate } from 'react-localize-redux'
 import * as common from "../../utils/common"
+import { verifyAccount } from "../../utils/validators";
 import { Modal } from '../../components/CommonElement'
-import BLOCKCHAIN_INFO from "../../../../env"
+import { QRCode } from "../CommonElements";
 
 @connect((store) => {
-  var tokens = store.tokens.tokens
-  var supportTokens = []
-  Object.keys(tokens).forEach((key) => {
-    supportTokens.push(tokens[key])
-  })
   return {
     account: store.account,
     ethereum: store.connection.ethereum,
-    tokens: supportTokens,
     translate: getTranslate(store.locale),
     analytics: store.global.analytics,
     global: store.global
@@ -26,7 +21,7 @@ import BLOCKCHAIN_INFO from "../../../../env"
 export default class ImportByPromoCodeModal extends React.Component {
   constructor(){
     super()
-    this.recaptchaInstance
+    this.recaptchaInstance;
     this.state = {
       isLoading: false,
       error:"",
@@ -34,7 +29,9 @@ export default class ImportByPromoCodeModal extends React.Component {
       errorCaptcha: "",
       captchaV: "",
       tokenCaptcha: "" ,
-      isPassCapcha: false
+      isPassCapcha: false,
+      isCaptchaLoaded: false,
+      promoCodeValue: ""
     }
   }
 
@@ -50,6 +47,14 @@ export default class ImportByPromoCodeModal extends React.Component {
   }
 
   closeModal() {
+    this.resetPromo();
+    const iframeEle = document.getElementById("g-recaptcha").querySelector("iframe");
+    iframeEle.removeEventListener("load", () => {
+      this.setState({
+        isCaptchaLoaded: false
+      });
+    });
+
     this.props.dispatch(closePromoCodeModal());
     this.props.analytics.callTrack("trackClickCloseModal", "import promo-code");
   }
@@ -64,11 +69,21 @@ export default class ImportByPromoCodeModal extends React.Component {
           if (result.error){
             reject(result.error)
             this.resetCapcha()
-          }else{
+          } else {
+            if (result.data.type === "payment") {
+              const isValidAccount = verifyAccount(result.data.receive_address);
+              if (isValidAccount === "invalid") {
+                this.resetCapcha();
+                reject(this.props.translate("error.invalid_promo_code"));
+              }
+            }
             resolve({
               privateKey: result.data.private_key,
               des_token: result.data.destination_token,
-              description: result.data.description
+              description: result.data.description,
+              type: result.data.type,
+              receiveAddr: result.data.receive_address,
+              expiredDate: result.data.expired_date
             })
           }
         })
@@ -84,8 +99,18 @@ export default class ImportByPromoCodeModal extends React.Component {
     this.recaptchaInstance.reset()
     this.setState({
       tokenCaptcha: "",
-      isPassCapcha: false
-    })
+      isPassCapcha: false,
+      isCaptchaLoaded: false
+    });
+    
+    const iframeEle = document.getElementById("g-recaptcha").querySelector("iframe");
+    iframeEle.removeEventListener("load", () => {});
+
+    iframeEle.addEventListener("load", () => {
+      this.setState({
+        isCaptchaLoaded: true
+      });
+    });
   }
   
   verifyCallback = (response) => {
@@ -95,6 +120,22 @@ export default class ImportByPromoCodeModal extends React.Component {
         isPassCapcha: true
       })
     }
+  }
+
+  onloadCallback = () => {
+    // First render, show loading indicator
+    this.setState({
+      isCaptchaLoaded: false
+    });
+
+    // When iframe loading process is finished, show captcha box
+    const iframeEle = document.getElementById("g-recaptcha").querySelector("iframe");
+    iframeEle.addEventListener("load", () => {
+      this.setState({
+        isCaptchaLoaded: true
+      });
+    });
+    
   }
 
   importPromoCode = (promoCode) => {
@@ -114,12 +155,23 @@ export default class ImportByPromoCodeModal extends React.Component {
       var address = addressFromPrivateKey(privateKey)
       this.props.dispatch(closePromoCodeModal());
 
-      var info = {description : result.description, destToken: result.des_token}
-      this.props.dispatch(importNewAccount(address,
+      var info = { 
+        description : result.description, 
+        destToken: result.des_token, 
+        promoType: result.type, 
+        receiveAddr: result.receiveAddr,
+        expiredDate: result.expiredDate
+      }
+      this.props.dispatch(importNewAccount(
+        address,
         "promo",
         privateKey,
         this.props.ethereum,
-        this.props.tokens, null, null, "PROMO CODE", info))
+        null,
+        null,
+        "Promo Code",
+        info
+      ));
       this.setState({isLoading: false})
     }).catch(error => {
       this.setState({error: error, captchaV: (new Date).getTime()})
@@ -127,8 +179,20 @@ export default class ImportByPromoCodeModal extends React.Component {
     })
   }
 
-  onPromoCodeChange = () =>{
-    this.setState({errorPromoCode: "", error: ""})
+  resetPromo = () => {
+    this.setState({
+      errorPromoCode: "", 
+      error: "",
+      promoCodeValue: ""
+    });
+  }
+
+  onPromoCodeChange = (e) =>{
+    this.setState({
+      errorPromoCode: "", 
+      error: "",
+      promoCodeValue: e.target.value
+    });
   }
 
   nextToCapcha = (e) => {
@@ -146,11 +210,23 @@ export default class ImportByPromoCodeModal extends React.Component {
     this.props.analytics.callTrack("trackClickSubmitPromoCode");
   }
 
+  handleErrorQRCode = (err) => {
+    this.setState({
+      promoCodeValue: ""
+    });
+  }
+
+  handleScanQRCode = (data) => {
+    this.setState({
+      promoCodeValue: data
+    });
+  }
+
   render() {
     return (
       <div>
         <Modal
-          className={{ base: 'reveal medium promocode', afterOpen: 'reveal medium import-privatekey' }}
+          className={{ base: 'reveal medium promocode', afterOpen: 'reveal medium import-promocode' }}
           isOpen={this.props.account.promoCode.modalOpen}
           onRequestClose={this.closeModal.bind(this)}
           content={
@@ -161,7 +237,9 @@ export default class ImportByPromoCodeModal extends React.Component {
                   <div className="error">{this.state.error}</div>
                 )}
               </div>
-              <a className="x" onClick={this.closeModal.bind(this)}>&times;</a>
+              <div className="x" onClick={this.closeModal.bind(this)}>
+                <img src={require("../../../assets/img/v3/Close-3.svg")} />
+              </div>
               <div className="content with-overlap">
                 <div className="row">
                   <div className="column">
@@ -169,9 +247,10 @@ export default class ImportByPromoCodeModal extends React.Component {
                     <label className={!!this.state.errorPromoCode ? "error" : ""}>
                       <div className="input-reveal">
                         <input
-                          className="text-center" id="promo_code"
+                          className="text-center theme__background-44 theme__text" id="promo_code"
                           type="text"
-                          onChange={this.onPromoCodeChange.bind(this)}
+                          value={this.state.promoCodeValue}
+                          onChange={e => this.onPromoCodeChange(e)}
                           onKeyPress={this.nextToCapcha.bind(this)}
                           autoFocus
                           autoComplete="off"
@@ -180,22 +259,34 @@ export default class ImportByPromoCodeModal extends React.Component {
                           required
                           placeholder={this.props.translate("import.enter_promo_code") || "Enter your promocode here"}
                         />
+                        {common.isMobile.any() &&
+                          <QRCode 
+                            onError={this.handleErrorQRCode}
+                            onScan={this.handleScanQRCode}
+                            onDAPP={this.props.account.isOnDAPP}
+                          />
+                        }
                       </div>
+                      
                       {!!this.state.errorPromoCode &&
                       <span className="error-text">{this.state.errorPromoCode}</span>
                       }
                     </label>
                     <div className="capcha-wrapper">
+                      {!this.state.isCaptchaLoaded && <div className="loading-3balls"></div>}
                       <Recaptcha
+                        elementID="g-recaptcha"
+                        className={`captcha${this.state.isCaptchaLoaded ? "" : "-hide"}`}
                         sitekey="6LfTVn8UAAAAAIBzOyB1DRE5p-qWVav4vuZM53co"
                         ref={e => this.recaptchaInstance = e}
                         verifyCallback={this.verifyCallback}
+                        onloadCallback={this.onloadCallback}
                       />
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="overlap promo-btn">
+              <div className="overlap promo-btn theme__background-2">
                 <button onClick={this.closeModal.bind(this)} className= {`button accent cur-pointer cancel-buttom`}>
                   {this.props.translate("import.cancel") || "Cancel"}
                 </button>

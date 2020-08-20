@@ -1,5 +1,6 @@
 import React from 'react';
 import Mixpanel from "./mixpanel"
+import GoogleTagmanager from "./googleTagManager"
 
 export default class AnalyticFactory extends React.Component{
   constructor(props) {
@@ -19,10 +20,15 @@ export default class AnalyticFactory extends React.Component{
           instanceWorker.initService(this.network)
           this.workers.push(instanceWorker)
           break
-        default:
-          var instanceWorker = new Mixpanel()
+        case "google":
+          var instanceWorker = new GoogleTagmanager()
           instanceWorker.initService(this.network)
           this.workers.push(instanceWorker)
+          break
+        default:
+          // var instanceWorker = new Mixpanel()
+          // instanceWorker.initService(this.network)
+          // this.workers.push(instanceWorker)
           break
       }
     })
@@ -30,7 +36,9 @@ export default class AnalyticFactory extends React.Component{
 
   callTrack = (funcName, ...args) => {
     for (var i = 0; i< this.workers.length; i++){
-      this.workers[i][funcName](...args)
+      if(this.workers[i][funcName]){
+        this.workers[i][funcName](...args)
+      }
     }
   }
 }

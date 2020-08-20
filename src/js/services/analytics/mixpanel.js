@@ -80,6 +80,16 @@ export default class Mixpanel {
     }
   }
 
+  txMinedStatus(hash, walletType, tradeType, status, address, accountType) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track("Swap_Tx_Mined", {hash, walletType, tradeType, status, address, accountType})
+      }catch(e){
+        console.log(e)
+      }
+    }
+  }
+
 
   trackCoinExchange(data) {
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
@@ -90,7 +100,16 @@ export default class Mixpanel {
       }
     }
   }
-
+  
+  trackWalletVolume(walletType, srcTokenSymbol, srcAmount, destTokenSymbol) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function') {
+      try {
+        mixpanel.track("Swap_WalletVolume", { walletType, srcTokenSymbol, srcAmount, destTokenSymbol })
+      } catch(e) {
+        console.log(e)
+      }
+    }
+  }
 
   trackCoinTransfer(token){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
@@ -121,6 +140,16 @@ export default class Mixpanel {
       }
     }
   }
+  
+  trackViewingKyberSwapApp(os) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try {
+        mixpanel.track("Step_1_View_KyberSwap_App", {os})
+      } catch(e) {
+        console.log(e)
+      }
+    }
+  }
 
   trackBaseCurrency(currency){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
@@ -132,50 +161,10 @@ export default class Mixpanel {
     }
   }
 
-  trackMarketSetting(field, value){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Swap_*_2_Click_MarketSetting", {field, value})
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
   trackChooseGas(type, gas, typeGas){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
       try{
         mixpanel.track(`Step_3_select_advance_feature_${type}_choose_gas`, {gas: gas, typeGas: typeGas})
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
-  trackSearchETHMarket(){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Swap_*_1_Click_To_Search_ETH_Market")
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
-  trackChooseTokenOnBalanceBoard(token){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Swap_*_3_Click_Choose_Token_Balance_Board", {token : token})
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
-  trackClickSortBalanceBoard(type, sortType){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Swap_*_4_Click_Sort_Token_Balance_Board", {type: type, sortType: sortType})
       }catch(e){
         console.log(e)
       }
@@ -242,16 +231,6 @@ export default class Mixpanel {
     }
   }
 
-  trackSortETHMarket(field, sortType){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Swap_*_1_Click_Sort_ETH_Market", {field: field, sortType: sortType})
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
   trackClickSwapDestSrc(sourceToken, destToken){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
       try{
@@ -308,6 +287,16 @@ export default class Mixpanel {
         mixpanel.track(`Step_5_click_confirm_${type}`, {token: token})
       }catch(e){
         console.log(e)
+      }
+    }
+  }
+
+  trackBroadcastedTransaction(timeout) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === "function") {
+      try {
+        mixpanel.track("Swap_ConfirmTime", { value: timeout });
+      } catch (e) {
+        console.log(e);
       }
     }
   }
@@ -442,10 +431,10 @@ export default class Mixpanel {
     }
   }
 
-  trackClickImportAccount(type){
+  trackClickImportAccount(type, screen){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
       try{
-        mixpanel.track(`Step_2_Connect_wallet_${type}`)
+        mixpanel.track(`Step_2_Connect_wallet_${type}_${screen}`)
       }catch(e){
         console.log(e)
       }
@@ -592,26 +581,6 @@ export default class Mixpanel {
     }
   }
 
-  trackClickOpenMarket(){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Step_*_Open_Market_Modal")
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
-  trackClickCloseMarket(){
-    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
-      try{
-        mixpanel.track("Step_*_Close_Market_Modal")
-      }catch(e){
-        console.log(e)
-      }
-    }
-  }
-
   trackClickShowAccountBalance(tradeType){
     if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
       try{
@@ -648,6 +617,184 @@ export default class Mixpanel {
         mixpanel.track(`Step_2_Hide_Advance_Option_${tradeType}`)
       }catch(e){
         console.log(e)
+      }
+    }
+  }
+  trackClickToken(symbol, screen){
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`Step_2_Click_Top_Token_${screen}_${symbol}`)
+      }catch(e){
+        console.log(e)
+      }
+    }
+  }
+
+  trackClickTokenInAccountBalance(symbol, screen){
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`Account_balance_Select_Token_${screen}_${symbol}`)
+      }catch(e){
+        console.log(e)
+      }
+    }
+  }
+
+  /**
+   * Limit Order
+   */
+  trackClickSubmitOrder() {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Submit`);
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackClickConfirmSubmitOrder() {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Confirm_Submit`);
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackClickCancelOrder(orderId) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Cancel`, { orderId });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackClickConfirmCancelOrder(orderId) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Confirm_Cancel`, { orderId });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackClickConvertEth() {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Convert_Eth`);
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderFocusAmount(type) {
+    // Type: source, dest, rate
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        const capitalizeType = type.charAt(0).toUpperCase() + type.slice(1);
+        mixpanel.track(`LimitOrder_Focus_${capitalizeType}_Amount`);
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderSelectToken(type, token) {
+    // Type: source, dest
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        const capitalizeType = type.charAt(0).toUpperCase() + type.slice(1);
+        mixpanel.track(`LimitOrder_Select_${capitalizeType}_Amount`, { token });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickApprove(type, token) {
+    // Type: Zero, Max
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Approve_Token_${type}`, { token });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickChooseMarket(market) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track('LimitOrder_Click_Choose_Market', { market });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickSort(field, isDsc) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Sort_${field}`, { typeSort: isDsc ? 'dsc' : 'asc' });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickSortOnWalletPanel(field, isDsc) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Sort_On_Wallet_Panel_${field}`, { typeSort: isDsc ? 'dsc' : 'asc' });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickSelectPair(pair) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Select_Pair`, { pair });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickFavoritePair(typeUser, pair, isFavorite) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Favorite_Pair`, {typeUser: typeUser, pair: pair, isFavorite: isFavorite });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackLimitOrderClickChangeSourceAmountByPercentage(percent) {
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Change_Source_Amount_By_Percentage`, { percent });
+      }catch(e){
+        console.log(e);
+      }
+    }
+  }
+
+  trackClickShowWalletBalance(isShow) {
+    let status = isShow? 'show' : 'hide'
+    if (typeof mixpanel !== "undefined" && typeof mixpanel.track === 'function'){
+      try{
+        mixpanel.track(`LimitOrder_Click_Show_Wallet_Balance`, { status });
+      }catch(e){
+        console.log(e);
       }
     }
   }

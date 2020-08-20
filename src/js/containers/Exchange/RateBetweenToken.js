@@ -1,12 +1,9 @@
 import React from "react"
 import { connect } from "react-redux"
-import { roundingNumber, convertBuyRate } from "../../utils/converter"
-import * as actions from "../../actions/exchangeActions"
+import { roundingRateNumber, convertBuyRate } from "../../utils/converter"
 import { getTranslate } from 'react-localize-redux';
 import * as converter from '../../utils/converter'
-import * as constants from '../../services/constants'
 import ReactTooltip from 'react-tooltip'
-import BLOCKCHAIN_INFO from "../../../../env"
 
 @connect((store, props) => {
   var tokens = store.tokens.tokens
@@ -24,7 +21,7 @@ import BLOCKCHAIN_INFO from "../../../../env"
   return {
     ...props,
     translate: getTranslate(store.locale), rateEthUsd, rateUSD, tokens,
-    exchange
+    exchange, theme: store.global.theme
   }
 })
 
@@ -38,31 +35,36 @@ export default class RateBetweenToken extends React.Component {
       if (isSourceTokenETH) {
         return (
           <div className={"token-compare__item"}>
-            1 {destToken} =<span className="rate-loading"> <img src={require('../../../assets/img/waiting-white.svg')} /></span> ETH
+            1 {destToken} =<span className="rate-loading"> <img src={require(`../../../assets/img/${this.props.theme === 'dark' ? 'waiting-black' : 'waiting-white'}.svg`)} /></span> ETH
           </div>
         )
       }
 
       return (
         <div className={"token-compare__item"}>
-          1 {sourceToken} =<span className="rate-loading"> <img src={require('../../../assets/img/waiting-white.svg')} /></span> {this.props.exchange.destTokenSymbol}
+          1 {sourceToken} =<span className="rate-loading"> <img src={require(`../../../assets/img/${this.props.theme === 'dark' ? 'waiting-black' : 'waiting-white'}.svg`)} /></span> {this.props.exchange.destTokenSymbol}
         </div>
       )
     }
 
-    var expectedRate = converter.toT(this.props.exchange.offeredRate)
-    var tokens = this.props.tokens
+    var expectedRate = converter.toT(this.props.exchange.expectedRate)
     var change = this.props.exchange.percentChange
     var rateUSD = !!parseFloat(this.props.rateUSD) ? parseFloat(this.props.rateUSD) : 0
     let tokenRateText;
 
     if (isSourceTokenETH) {
-      const tokenETHBuyRate = this.props.exchange.offeredRate ? convertBuyRate(this.props.exchange.offeredRate) : 0;
+      const tokenETHBuyRate = this.props.exchange.expectedRate ? convertBuyRate(this.props.exchange.expectedRate) : 0;
       const tokenUSDBuyRate = tokenETHBuyRate * this.props.rateEthUsd;
 
-      tokenRateText = <span>1 {destToken} = {roundingNumber(tokenETHBuyRate)} ETH {tokenUSDBuyRate ? `= ${tokenUSDBuyRate.toFixed(3)} USD` : ""}</span>
+      tokenRateText = <span>1 {destToken} = {roundingRateNumber(tokenETHBuyRate)} ETH {tokenUSDBuyRate ? `= ${tokenUSDBuyRate.toFixed(3)} USD` : ""}</span>
     } else {
-      tokenRateText = <span>1 {sourceToken} = {roundingNumber(expectedRate)} {this.props.exchange.destTokenSymbol} {rateUSD != 0 ? `= ${rateUSD.toFixed(3)} USD` : ""}</span>
+      
+      if(rateUSD != 0 && expectedRate != 0){
+        rateUSD = rateUSD*(100-change)/100
+      }else{
+        rateUSD = 0
+      }
+      tokenRateText = <span>1 {sourceToken} = {roundingRateNumber(expectedRate)} {this.props.exchange.destTokenSymbol} {rateUSD != 0 ? `= ${rateUSD.toFixed(3)} USD` : ""}</span>
     }
 
     if (change == 0) {
@@ -76,8 +78,19 @@ export default class RateBetweenToken extends React.Component {
           {change}%
           <img src={require('../../../assets/img/v3/arrow-down-red.svg')}/>
         </span>
-        <span className="token-compare__tooltip" data-html={true} data-tip={`<p>Price is dependent on your swap value. There is a ${change}% difference in price for the requested quantity and the default ${BLOCKCHAIN_INFO.min_accept_amount} ETH quantity</p>`} data-for="info_indicator" currentitem="false">
-            <img src={require('../../../assets/img/common/blue-indicator.svg')}/>
+        <span
+          className="token-compare__tooltip"
+          data-html={true}
+          data-tip={`
+            <div class="info-indicator">
+              <div class="info-indicator__text">There is a ${change}% difference between the estimated price for your swap amount and the reference price.</div>
+              <div class="info-indicator__note">Note: Estimated price depends on your swap amount. Reference price is from Chainlink and Kyber Network.</div>
+            </div>
+          `}
+          data-for="info_indicator"
+          currentitem="false"
+        >
+          <img src={require('../../../assets/img/common/blue-indicator.svg')}/>
         </span>
         <ReactTooltip place="top" offset={{left:95}} id="info_indicator" className={"common-tooltip"} type="light" html={true}/>
       </div>

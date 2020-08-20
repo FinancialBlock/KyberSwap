@@ -12,7 +12,29 @@ var fs = require('fs');
 var sass = require('node-sass');
 
 var getConfig = env => {
-    const outputPath = `../public/swap/${env}`
+    var buildFolder = env
+    var chain 
+    switch(env){
+        case "staging_limit_order":
+            chain = "staging_limit_order"
+            break
+        case "production":
+            chain = "production"
+            break
+        case "staging":
+            chain = "staging"
+            break
+        case "semi_production":
+            chain = "semi_production"
+            break
+        case "ropsten":
+            chain = "ropsten"
+            break
+        default:
+            chain = "ropsten"
+            break
+    }
+    const outputPath = `../public/swap/${buildFolder}`
 
     const timestamp = Date.now();
 
@@ -35,17 +57,22 @@ var getConfig = env => {
         new webpack.DefinePlugin({
             'env': JSON.stringify(env),
             'process.env': {
-                'logger': env === 'production' || env === 'staging'?'false': 'true',
-                'env': JSON.stringify(env)
+                'logger': chain === 'production'?'false': 'true',
+                'env': JSON.stringify(env),
+                'integrate': true
             }
         }),
         new WebpackShellPlugin(
             {
                 // hash: hash,
                // onBuildStart:['node webpack.beforebuild.js'],
-                onBuildEnd:[`BUNDLE_NAME=[hash] chain=${env} node webpack.afterbuild.js`]
+                onBuildEnd:[`BUNDLE_NAME=[hash] chain=${chain} folder=${buildFolder} node webpack.afterbuild.js`]
             }
-        )
+        ),
+        new webpack.IgnorePlugin({
+            resourceRegExp: /^\.\/locale$/,
+            contextRegExp: /moment$/
+        })
     ];
     return {
         context: path.join(__dirname, 'src'),
@@ -60,7 +87,6 @@ var getConfig = env => {
                 new TerserPlugin({
                     parallel: true,
                     terserOptions: {
-                        ecma: 6,
                         compress: {
                             drop_console: true,
                             warnings: false
@@ -122,10 +148,11 @@ var getConfig = env => {
     }
 };
 
-async function getTokenApi(network) {
+async function getTokenApi(network, backupServer = false) {
     var BLOCKCHAIN_INFO = require('./env/config-env/' + (network) + ".json");
+    const url = backupServer ? `${BLOCKCHAIN_INFO.tracker}/internal/currencies` : `${BLOCKCHAIN_INFO.kyberswap_api}/currencies`;
     return new Promise((resolve, result) => {
-        fetch(BLOCKCHAIN_INFO.api_tokens, {
+        fetch(url, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json, text/plain, */*',
@@ -133,25 +160,25 @@ async function getTokenApi(network) {
             },
         }).then((response) => {
             return response.json()
+        }).then((result) => {
+            let tokens = BLOCKCHAIN_INFO.tokens;
+            if (result.success) {
+                tokens = {};
+                result.data.map(val => {
+                    tokens[val.symbol] = val
+                })
+            }
+            resolve(tokens)
+        }).catch(async (err) => {
+            console.log(err)
+            let tokens = BLOCKCHAIN_INFO.tokens;
+            if (!backupServer) {
+              tokens = await getTokenApi(network, true);
+            }
+            resolve(tokens)
         })
-            .then((result) => {
-                if (result.success) {
-                    var tokens = {}
-                    result.data.map(val => {
-                        tokens[val.symbol] = val
-                    })
-                    resolve(tokens)
-                }
-            }).catch((err) => {
-                console.log(err)
-                var tokens = BLOCKCHAIN_INFO.tokens
-                resolve(tokens)
-            })
     })
-
 }
-
-
 
 var webpack = require('webpack');
 
